@@ -1,0 +1,37 @@
+# Fichier d'exemple pour les overrides de configuration
+# Copiez ce fichier vers docker-compose.override.yml pour personnaliser votre configuration
+# Ce fichier sera automatiquement utilisé par docker-compose
+
+version: '3.8'
+
+services:
+  # Exemple: Ajouter plus de workers Spark
+  # spark-worker-3:
+  #   image: bitnami/spark:3.5
+  #   hostname: spark-worker-3
+  #   container_name: spark-worker-3
+  #   depends_on:
+  #     - spark-master
+  #   environment:
+  #     - SPARK_MODE=worker
+  #     - SPARK_MASTER_URL=spark://spark-master:7077
+  #     - SPARK_WORKER_MEMORY=2g
+  #     - SPARK_WORKER_CORES=2
+  #   networks:
+  #     - bigdata-network
+  #   volumes:
+  #     - spark-data:/opt/bitnami/spark/work
+  #     - ./lakehouse:/lakehouse
+  #     - ./spark/config:/opt/bitnami/spark/conf
+
+  # Exemple: Modifier les ressources allouées
+  # fastapi:
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         cpus: '1'
+  #         memory: 2G
+  #       reservations:
+  #         cpus: '0.5'
+  #         memory: 1G
+

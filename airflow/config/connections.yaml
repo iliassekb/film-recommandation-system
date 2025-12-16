@@ -1,0 +1,27 @@
+# Configuration des connexions Airflow
+# Ce fichier peut être utilisé pour définir des connexions par défaut
+# Note: Les connexions peuvent aussi être créées via l'interface web d'Airflow
+
+# Exemple de connexion Spark (à créer via l'interface web ou CLI)
+# spark_default:
+#   conn_type: spark
+#   host: spark://spark-master
+#   port: 7077
+#   extra: '{"queue": "default"}'
+
+# Exemple de connexion PostgreSQL
+# postgres_default:
+#   conn_type: postgres
+#   host: postgres
+#   schema: airflow
+#   login: airflow
+#   password: airflow
+#   port: 5432
+
+# Exemple de connexion Redis
+# redis_default:
+#   conn_type: redis
+#   host: redis
+#   port: 6379
+#   password: null
+

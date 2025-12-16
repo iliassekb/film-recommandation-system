@@ -1,0 +1,23 @@
+# Dépendances Python supplémentaires pour Airflow
+# Ces packages seront installés dans l'environnement Airflow
+
+# Pour Spark
+apache-airflow-providers-apache-spark==4.4.0
+
+# Pour Kafka
+apache-airflow-providers-apache-kafka==1.2.0
+
+# Pour PostgreSQL
+apache-airflow-providers-postgres==5.10.0
+psycopg2-binary==2.9.9
+
+# Pour MLflow
+mlflow==2.8.1
+
+# Pour Delta Lake
+delta-spark==3.0.0
+
+# Utilitaires
+pandas==2.1.3
+numpy==1.26.2
+
