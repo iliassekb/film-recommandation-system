@@ -38,32 +38,44 @@ Ce script permet de capturer et afficher en temps réel les événements des 3 t
 
 ## Utilisation
 
-### Linux/Mac (bash)
+### Option 1 : Mode LOCAL (Recommandé pour ressources limitées)
 
+Le mode LOCAL exécute tout sur le driver uniquement, évitant les problèmes de JARs sur les workers. **Parfait si vous avez des ressources limitées (4 cores, 2GB RAM).**
+
+**Depuis la machine hôte (Windows/Linux/Mac):**
 ```bash
-./tools/run_stream_console.sh
+# Méthode simple: utiliser le script qui copie et exécute automatiquement
+python3 tools/run_stream_console_from_host.py --mode local
 ```
 
-### Windows (PowerShell)
+**Ou manuellement:**
+```bash
+# 1. Copier le script dans le conteneur
+docker cp tools/run_stream_console.py spark-master:/tmp/
 
-```powershell
-.\tools\run_stream_console.ps1
+# 2. Exécuter le script
+docker-compose exec spark-master python3 /tmp/run_stream_console.py --mode local
 ```
 
-### Exécution directe dans le conteneur Spark
+### Option 2 : Mode CLUSTER (nécessite installation des JARs)
 
+Pour utiliser le mode cluster avec les workers, vous devez d'abord installer les JARs Kafka :
+
+**Depuis la machine hôte (Windows/Linux/Mac):**
 ```bash
-docker-compose exec spark-master bash -c "
-  export KAFKA_BOOTSTRAP_SERVERS=kafka:29092 && \
-  export STORAGE_FORMAT=parquet && \
-  export LAKEHOUSE_PATH=/data && \
-  /opt/spark/bin/spark-submit \
-    --master spark://spark-master:7077 \
-    --deploy-mode client \
-    --conf spark.sql.adaptive.enabled=true \
-    --conf spark.sql.adaptive.coalescePartitions.enabled=true \
-    /opt/spark/jobs/stream_kafka_console.py
-"
+# 1. Installer les JARs Kafka (voir scripts/install_kafka_jars.sh ou .ps1)
+# 2. Lancer le streaming
+python3 tools/run_stream_console_from_host.py --mode cluster
+```
+
+**Ou manuellement:**
+```bash
+# 1. Installer les JARs Kafka d'abord
+python3 scripts/install_kafka_jars.py  # ou le script approprié
+
+# 2. Copier et exécuter
+docker cp tools/run_stream_console.py spark-master:/tmp/
+docker-compose exec spark-master python3 /tmp/run_stream_console.py --mode cluster
 ```
 
 ## Comportement
@@ -79,10 +91,26 @@ docker-compose exec spark-master bash -c "
 
 Appuyez sur **Ctrl+C** pour arrêter le streaming.
 
+## Dépannage
+
+### Erreur: `NoClassDefFoundError: Could not initialize class org.apache.spark.sql.kafka010.consumer.KafkaDataConsumer$`
+
+**Solution:** Utilisez le mode LOCAL (Option 1 ci-dessus) qui télécharge automatiquement les JARs Kafka via `--packages`, ou installez les JARs manuellement avec `.\scripts\install_kafka_jars.ps1`
+
+### Mode LOCAL recommandé pour ressources limitées
+
+Si vous avez des ressources limitées (4 cores, 2GB RAM), utilisez le **mode LOCAL** qui :
+- ✅ N'a pas besoin de workers Spark
+- ✅ Télécharge automatiquement les JARs Kafka
+- ✅ Utilise moins de ressources
+- ✅ Plus simple à mettre en place
+
 ## Notes
 
 - Le script utilise `startingOffsets: latest`, donc il ne lit que les nouveaux événements après le démarrage
 - Pour lire depuis le début des topics, modifiez le script pour utiliser `startingOffsets: earliest`
 - Les données sont affichées dans la console uniquement, elles ne sont pas sauvegardées
 - Pour sauvegarder les données, utilisez `stream_kafka_to_silver.py` à la place
+- Mode LOCAL: Utilise `local[2]` (2 threads sur le driver uniquement)
+- Mode CLUSTER: Nécessite les JARs Kafka installés sur tous les workers
 

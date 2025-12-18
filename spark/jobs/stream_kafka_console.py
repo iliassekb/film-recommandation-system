@@ -37,7 +37,8 @@ def create_spark_session() -> SparkSession:
     builder = SparkSession.builder \
         .appName("Stream_Kafka_Console") \
         .config("spark.sql.adaptive.enabled", "true") \
-        .config("spark.sql.adaptive.coalescePartitions.enabled", "true")
+        .config("spark.sql.adaptive.coalescePartitions.enabled", "true") \
+        .config("spark.sql.streaming.checkpointLocation", "/tmp/spark-checkpoints/stream_kafka_console")
     
     if Config.STORAGE_FORMAT == "delta":
         builder = builder \
