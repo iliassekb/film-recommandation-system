@@ -1,0 +1,51 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Click Event Schema",
+  "description": "Schema for click events in Kafka topic events_clicks",
+  "type": "object",
+  "required": ["event_id", "event_type", "event_ts", "user_id", "movie_id"],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique identifier for the event (UUID v4)"
+    },
+    "event_type": {
+      "type": "string",
+      "enum": ["click"],
+      "description": "Event type, must be 'click'"
+    },
+    "event_ts": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Event timestamp in ISO-8601 format (UTC)"
+    },
+    "user_id": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "User identifier (positive integer)"
+    },
+    "movie_id": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Movie identifier (positive integer)"
+    },
+    "click_type": {
+      "type": "string",
+      "enum": ["trailer", "poster", "title", "recommendation"],
+      "description": "Type of click interaction (optional)"
+    },
+    "session_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Session identifier (optional)"
+    },
+    "referrer": {
+      "type": "string",
+      "format": "uri",
+      "description": "Referrer URL (optional)"
+    }
+  },
+  "additionalProperties": false
+}
+

@@ -1,9 +1,9 @@
 {
   "dashboard": {
     "id": null,
-    "uid": "bigdata-overview",
-    "title": "Big Data Ecosystem Overview",
-    "tags": ["bigdata", "overview"],
+    "uid": "api-overview",
+    "title": "API Overview",
+    "tags": ["api", "fastapi"],
     "timezone": "browser",
     "schemaVersion": 16,
     "version": 0,
@@ -11,13 +11,13 @@
     "panels": [
       {
         "id": 1,
-        "title": "Service Status",
-        "type": "stat",
-        "gridPos": {"h": 8, "w": 6, "x": 0, "y": 0},
+        "title": "Requests Per Second",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
         "targets": [
           {
-            "expr": "up",
-            "legendFormat": "{{job}}",
+            "expr": "sum(rate(http_requests_total[1m])) by (method, endpoint)",
+            "legendFormat": "{{method}} {{endpoint}}",
             "refId": "A",
             "datasource": {
               "type": "prometheus"
@@ -26,38 +26,39 @@
         ],
         "fieldConfig": {
           "defaults": {
+            "unit": "reqps",
+            "color": {
+              "mode": "palette-classic"
+            },
+            "mappings": [],
             "thresholds": {
               "mode": "absolute",
               "steps": [
-                {"value": 0, "color": "red"},
-                {"value": 1, "color": "green"}
+                {"value": null, "color": "green"}
               ]
             }
           },
           "overrides": []
         },
         "options": {
-          "graphMode": "area",
-          "colorMode": "value",
-          "justifyMode": "auto",
-          "orientation": "auto",
-          "reduceOptions": {
-            "values": false,
-            "calcs": ["lastNotNull"],
-            "fields": ""
+          "tooltip": {
+            "mode": "multi"
           },
-          "textMode": "auto"
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          }
         }
       },
       {
         "id": 2,
-        "title": "Kafka Messages Rate",
+        "title": "P95 Latency",
         "type": "timeseries",
-        "gridPos": {"h": 8, "w": 9, "x": 6, "y": 0},
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
         "targets": [
           {
-            "expr": "rate(kafka_server_brokertopicmetrics_messagesin_total[5m])",
-            "legendFormat": "{{topic}}",
+            "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, method, endpoint))",
+            "legendFormat": "{{method}} {{endpoint}}",
             "refId": "A",
             "datasource": {
               "type": "prometheus"
@@ -66,6 +67,7 @@
         ],
         "fieldConfig": {
           "defaults": {
+            "unit": "s",
             "color": {
               "mode": "palette-classic"
             },
@@ -91,13 +93,13 @@
       },
       {
         "id": 3,
-        "title": "Spark Jobs",
+        "title": "Error Rate",
         "type": "timeseries",
-        "gridPos": {"h": 8, "w": 9, "x": 15, "y": 0},
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
         "targets": [
           {
-            "expr": "spark_job_num_active_tasks",
-            "legendFormat": "Active Tasks",
+            "expr": "sum(rate(http_requests_total{status=~\"5..\"}[5m])) by (method, endpoint)",
+            "legendFormat": "{{method}} {{endpoint}}",
             "refId": "A",
             "datasource": {
               "type": "prometheus"
@@ -106,6 +108,7 @@
         ],
         "fieldConfig": {
           "defaults": {
+            "unit": "reqps",
             "color": {
               "mode": "palette-classic"
             },
@@ -127,6 +130,42 @@
             "displayMode": "list",
             "placement": "bottom"
           }
+        }
+      },
+      {
+        "id": 4,
+        "title": "Top Endpoints",
+        "type": "table",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+        "targets": [
+          {
+            "expr": "topk(10, sum by (endpoint) (rate(http_requests_total[5m])))",
+            "format": "table",
+            "refId": "A",
+            "datasource": {
+              "type": "prometheus"
+            }
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "align": "auto",
+              "displayMode": "auto"
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": null, "color": "green"}
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "options": {
+          "showHeader": true,
+          "sortBy": []
         }
       }
     ],

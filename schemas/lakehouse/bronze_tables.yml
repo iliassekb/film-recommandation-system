@@ -1,0 +1,252 @@
+# Bronze Layer Table Schemas
+# Purpose: Store raw, unprocessed data exactly as received from sources
+# Storage Format: Parquet (raw CSVs preserved; Parquet for Spark processing)
+# Partitioning: By ingestion_date (date when data was ingested)
+
+tables:
+  - name: bronze_movielens_ratings_raw
+    description: Raw MovieLens ratings data, unprocessed
+    storage_format: parquet
+    partition_by:
+      - ingestion_date
+    columns:
+      - name: user_id
+        type: integer
+        nullable: false
+        description: User identifier
+      - name: movie_id
+        type: integer
+        nullable: false
+        description: Movie identifier
+      - name: rating
+        type: float
+        nullable: false
+        description: Rating value (0.5-5.0)
+      - name: timestamp
+        type: bigint
+        nullable: false
+        description: Unix timestamp (seconds)
+      - name: ingestion_date
+        type: date
+        nullable: false
+        description: Date when data was ingested
+      - name: ingestion_ts
+        type: timestamp
+        nullable: false
+        description: Full timestamp of ingestion
+
+  - name: bronze_movielens_movies_raw
+    description: Raw MovieLens movies metadata, unprocessed
+    storage_format: parquet
+    partition_by:
+      - ingestion_date
+    columns:
+      - name: movie_id
+        type: integer
+        nullable: false
+        description: Movie identifier (primary key)
+      - name: title
+        type: string
+        nullable: false
+        description: Movie title with year
+      - name: genres
+        type: string
+        nullable: false
+        description: Pipe-separated genres (e.g., "Action|Adventure|Sci-Fi")
+      - name: ingestion_date
+        type: date
+        nullable: false
+        description: Date when data was ingested
+      - name: ingestion_ts
+        type: timestamp
+        nullable: false
+        description: Full timestamp of ingestion
+    uniqueness:
+      - movie_id
+
+  - name: bronze_movielens_tags_raw
+    description: Raw MovieLens tags data, unprocessed
+    storage_format: parquet
+    partition_by:
+      - ingestion_date
+    columns:
+      - name: user_id
+        type: integer
+        nullable: false
+        description: User identifier
+      - name: movie_id
+        type: integer
+        nullable: false
+        description: Movie identifier
+      - name: tag
+        type: string
+        nullable: false
+        description: User-provided tag
+      - name: timestamp
+        type: bigint
+        nullable: false
+        description: Unix timestamp (seconds)
+      - name: ingestion_date
+        type: date
+        nullable: false
+        description: Date when data was ingested
+      - name: ingestion_ts
+        type: timestamp
+        nullable: false
+        description: Full timestamp of ingestion
+
+  - name: bronze_events_views_raw
+    description: Raw view events from Kafka, unprocessed
+    storage_format: parquet
+    partition_by:
+      - ingestion_date
+    columns:
+      - name: event_id
+        type: string
+        nullable: false
+        description: Event identifier (UUID)
+      - name: event_type
+        type: string
+        nullable: false
+        description: Always "view"
+      - name: event_ts
+        type: timestamp
+        nullable: false
+        description: Event timestamp (parsed from ISO-8601)
+      - name: user_id
+        type: integer
+        nullable: false
+        description: User identifier
+      - name: movie_id
+        type: integer
+        nullable: false
+        description: Movie identifier
+      - name: session_id
+        type: string
+        nullable: true
+        description: Session identifier (UUID)
+      - name: page_url
+        type: string
+        nullable: true
+        description: Page URL
+      - name: device_type
+        type: string
+        nullable: true
+        description: Device type (mobile|desktop|tablet)
+      - name: ingestion_date
+        type: date
+        nullable: false
+        description: Date when event was ingested
+      - name: ingestion_ts
+        type: timestamp
+        nullable: false
+        description: Full timestamp of ingestion
+      - name: raw_payload
+        type: string
+        nullable: false
+        description: Original JSON payload
+    uniqueness:
+      - event_id
+
+  - name: bronze_events_clicks_raw
+    description: Raw click events from Kafka, unprocessed
+    storage_format: parquet
+    partition_by:
+      - ingestion_date
+    columns:
+      - name: event_id
+        type: string
+        nullable: false
+        description: Event identifier (UUID)
+      - name: event_type
+        type: string
+        nullable: false
+        description: Always "click"
+      - name: event_ts
+        type: timestamp
+        nullable: false
+        description: Event timestamp (parsed from ISO-8601)
+      - name: user_id
+        type: integer
+        nullable: false
+        description: User identifier
+      - name: movie_id
+        type: integer
+        nullable: false
+        description: Movie identifier
+      - name: click_type
+        type: string
+        nullable: true
+        description: Type of click (trailer|poster|title|recommendation)
+      - name: session_id
+        type: string
+        nullable: true
+        description: Session identifier (UUID)
+      - name: referrer
+        type: string
+        nullable: true
+        description: Referrer URL
+      - name: ingestion_date
+        type: date
+        nullable: false
+        description: Date when event was ingested
+      - name: ingestion_ts
+        type: timestamp
+        nullable: false
+        description: Full timestamp of ingestion
+      - name: raw_payload
+        type: string
+        nullable: false
+        description: Original JSON payload
+    uniqueness:
+      - event_id
+
+  - name: bronze_events_ratings_raw
+    description: Raw rating events from Kafka, unprocessed
+    storage_format: parquet
+    partition_by:
+      - ingestion_date
+    columns:
+      - name: event_id
+        type: string
+        nullable: false
+        description: Event identifier (UUID)
+      - name: event_type
+        type: string
+        nullable: false
+        description: Always "rating"
+      - name: event_ts
+        type: timestamp
+        nullable: false
+        description: Event timestamp (parsed from ISO-8601)
+      - name: user_id
+        type: integer
+        nullable: false
+        description: User identifier
+      - name: movie_id
+        type: integer
+        nullable: false
+        description: Movie identifier
+      - name: rating
+        type: float
+        nullable: false
+        description: Rating value (0.5-5.0)
+      - name: review_text
+        type: string
+        nullable: true
+        description: Optional review text
+      - name: ingestion_date
+        type: date
+        nullable: false
+        description: Date when event was ingested
+      - name: ingestion_ts
+        type: timestamp
+        nullable: false
+        description: Full timestamp of ingestion
+      - name: raw_payload
+        type: string
+        nullable: false
+        description: Original JSON payload
+    uniqueness:
+      - event_id
+

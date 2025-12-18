@@ -1,0 +1,130 @@
+# Gold Layer Table Schemas
+# Purpose: Store pre-computed aggregations and ML model outputs
+# Storage Format: Delta Lake
+# Partitioning: By computed_date (date when data was computed)
+
+tables:
+  - name: gold_recommendations_als
+    description: ALS (Alternating Least Squares) personalized recommendations per user
+    storage_format: delta
+    partition_by:
+      - computed_date
+    columns:
+      - name: user_id
+        type: integer
+        nullable: false
+        description: User identifier
+      - name: movie_id
+        type: integer
+        nullable: false
+        description: Movie identifier
+      - name: score
+        type: float
+        nullable: false
+        description: ALS prediction score
+      - name: rank
+        type: integer
+        nullable: false
+        description: Rank within user (1 = highest score)
+      - name: model_version
+        type: string
+        nullable: false
+        description: MLflow model version used
+      - name: computed_at
+        type: timestamp
+        nullable: false
+        description: When recommendation was computed
+      - name: computed_date
+        type: date
+        nullable: false
+        description: Date of computation
+    uniqueness:
+      - user_id
+      - movie_id
+      - computed_date
+
+  - name: gold_trending_now
+    description: Trending movies based on recent user interactions
+    storage_format: delta
+    partition_by:
+      - computed_date
+    columns:
+      - name: movie_id
+        type: integer
+        nullable: false
+        description: Movie identifier
+      - name: trending_score
+        type: float
+        nullable: false
+        description: Computed trending score
+      - name: view_count_24h
+        type: integer
+        nullable: false
+        description: Views in last 24 hours
+      - name: click_count_24h
+        type: integer
+        nullable: false
+        description: Clicks in last 24 hours
+      - name: rating_avg_24h
+        type: float
+        nullable: true
+        description: Average rating in last 24 hours
+      - name: rank
+        type: integer
+        nullable: false
+        description: Rank by trending score
+      - name: computed_at
+        type: timestamp
+        nullable: false
+        description: When trending was computed
+      - name: computed_date
+        type: date
+        nullable: false
+        description: Date of computation
+    uniqueness:
+      - movie_id
+      - computed_date
+
+  - name: gold_recommendations_final
+    description: Final hybrid recommendations combining ALS and trending signals
+    storage_format: delta
+    partition_by:
+      - computed_date
+    columns:
+      - name: user_id
+        type: integer
+        nullable: false
+        description: User identifier
+      - name: movie_id
+        type: integer
+        nullable: false
+        description: Movie identifier
+      - name: als_score
+        type: float
+        nullable: false
+        description: ALS recommendation score
+      - name: trending_score
+        type: float
+        nullable: false
+        description: Trending score
+      - name: hybrid_score
+        type: float
+        nullable: false
+        description: Final hybrid score (weighted combination)
+      - name: rank
+        type: integer
+        nullable: false
+        description: Final rank
+      - name: computed_at
+        type: timestamp
+        nullable: false
+        description: When recommendation was computed
+      - name: computed_date
+        type: date
+        nullable: false
+        description: Date of computation
+    uniqueness:
+      - user_id
+      - movie_id
+      - computed_date
+

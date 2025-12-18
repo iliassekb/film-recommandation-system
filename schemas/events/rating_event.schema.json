@@ -1,0 +1,48 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Rating Event Schema",
+  "description": "Schema for rating events in Kafka topic events_ratings",
+  "type": "object",
+  "required": ["event_id", "event_type", "event_ts", "user_id", "movie_id", "rating"],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique identifier for the event (UUID v4)"
+    },
+    "event_type": {
+      "type": "string",
+      "enum": ["rating"],
+      "description": "Event type, must be 'rating'"
+    },
+    "event_ts": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Event timestamp in ISO-8601 format (UTC)"
+    },
+    "user_id": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "User identifier (positive integer)"
+    },
+    "movie_id": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Movie identifier (positive integer)"
+    },
+    "rating": {
+      "type": "number",
+      "minimum": 0.5,
+      "maximum": 5.0,
+      "multipleOf": 0.5,
+      "description": "Rating value, must be between 0.5 and 5.0 in increments of 0.5"
+    },
+    "review_text": {
+      "type": "string",
+      "maxLength": 5000,
+      "description": "Optional review text (max 5000 characters)"
+    }
+  },
+  "additionalProperties": false
+}
+

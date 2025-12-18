@@ -1,13 +1,30 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from pydantic_settings import BaseSettings
 from contextlib import asynccontextmanager
+from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
 import redis
 import logging
+import time
+from recommendations_service import RecommendationsService
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Prometheus metrics
+http_requests_total = Counter(
+    'http_requests_total',
+    'Total HTTP requests',
+    ['method', 'endpoint', 'status']
+)
+
+http_request_duration_seconds = Histogram(
+    'http_request_duration_seconds',
+    'HTTP request duration in seconds',
+    ['method', 'endpoint']
+)
 
 
 class Settings(BaseSettings):
@@ -31,11 +48,14 @@ settings = Settings()
 # Initialize Redis connection
 redis_client = None
 
+# Initialize Recommendations Service
+recommendations_service = None
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
-    global redis_client
+    global redis_client, recommendations_service
     try:
         redis_client = redis.Redis(
             host=settings.redis_host,
@@ -46,6 +66,14 @@ async def lifespan(app: FastAPI):
         logger.info("Connected to Redis")
     except Exception as e:
         logger.error(f"Failed to connect to Redis: {e}")
+    
+    # Initialize recommendations service
+    try:
+        recommendations_service = RecommendationsService(lakehouse_path=settings.lakehouse_path)
+        logger.info(f"Initialized RecommendationsService with lakehouse path: {settings.lakehouse_path}")
+    except Exception as e:
+        logger.error(f"Failed to initialize RecommendationsService: {e}")
+        recommendations_service = None
     
     yield
     
@@ -62,7 +90,7 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS middleware
+# CORS middleware (must be added before routes)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -70,6 +98,27 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Prometheus metrics middleware (after CORS)
+@app.middleware("http")
+async def prometheus_middleware(request: Request, call_next):
+    """Middleware to track HTTP requests for Prometheus metrics"""
+    start_time = time.time()
+    method = request.method
+    endpoint = request.url.path
+    
+    try:
+        response = await call_next(request)
+        status_code = response.status_code
+    except Exception as e:
+        status_code = 500
+        raise
+    finally:
+        duration = time.time() - start_time
+        http_requests_total.labels(method=method, endpoint=endpoint, status=status_code).inc()
+        http_request_duration_seconds.labels(method=method, endpoint=endpoint).observe(duration)
+    
+    return response
 
 
 @app.get("/")
@@ -104,6 +153,12 @@ async def health_check():
     return health_status
 
 
+@app.get("/metrics")
+async def metrics():
+    """Prometheus metrics endpoint"""
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
+
 @app.get("/api/v1/recommendations/{user_id}")
 async def get_recommendations(user_id: int, limit: int = 10):
     """
@@ -111,17 +166,84 @@ async def get_recommendations(user_id: int, limit: int = 10):
     
     Args:
         user_id: User ID
-        limit: Number of recommendations to return
+        limit: Number of recommendations to return (default: 10, max: 100)
     
     Returns:
-        List of recommended films
+        Dictionary with user_id and list of recommended films with details
     """
-    # TODO: Implement recommendation logic
-    return {
-        "user_id": user_id,
-        "recommendations": [],
-        "message": "Recommendation endpoint - to be implemented"
-    }
+    # Validate limit
+    if limit < 1:
+        limit = 10
+    if limit > 100:
+        limit = 100
+    
+    # Check cache first
+    cache_key = f"recommendations:user:{user_id}:limit:{limit}"
+    cached_result = None
+    
+    if redis_client:
+        try:
+            cached_data = redis_client.get(cache_key)
+            if cached_data:
+                import json
+                cached_result = json.loads(cached_data)
+                logger.info(f"Cache hit for user {user_id}")
+        except Exception as e:
+            logger.warning(f"Error reading from cache: {e}")
+    
+    if cached_result:
+        return cached_result
+    
+    # Check if service is available
+    if recommendations_service is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Recommendations service is not available. Please check if the lakehouse data is properly loaded."
+        )
+    
+    try:
+        # Get recommendations
+        recommendations = recommendations_service.get_recommendations_for_user(
+            user_id=user_id,
+            limit=limit,
+            include_movie_details=True
+        )
+        
+        if not recommendations:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No recommendations found for user {user_id}. The user may not exist in the training data."
+            )
+        
+        result = {
+            "user_id": user_id,
+            "count": len(recommendations),
+            "recommendations": recommendations
+        }
+        
+        # Cache the result (TTL: 1 hour)
+        if redis_client:
+            try:
+                import json
+                redis_client.setex(
+                    cache_key,
+                    3600,  # 1 hour TTL
+                    json.dumps(result)
+                )
+                logger.info(f"Cached recommendations for user {user_id}")
+            except Exception as e:
+                logger.warning(f"Error caching result: {e}")
+        
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting recommendations for user {user_id}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal server error while fetching recommendations: {str(e)}"
+        )
 
 
 @app.post("/api/v1/ratings")

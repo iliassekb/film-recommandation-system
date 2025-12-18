@@ -57,6 +57,27 @@ services:
     networks:
       - bigdata-network
 
+  # ==================== Kafka Topic Initialization ====================
+  kafka-topic-init:
+    image: python:3.11-slim
+    hostname: kafka-topic-init
+    container_name: kafka-topic-init
+    depends_on:
+      kafka:
+        condition: service_started
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+    volumes:
+      - ./tools:/app/tools
+    command: >
+      sh -c "
+        pip install --no-cache-dir kafka-python==2.0.2 &&
+        python /app/tools/kafka_topic_init.py
+      "
+    networks:
+      - bigdata-network
+    restart: "no"
+
   # ==================== PostgreSQL (Airflow Metadata DB) ====================
   postgres:
     image: postgres:15-alpine
@@ -113,8 +134,12 @@ services:
       - bigdata-network
     volumes:
       - spark-data:/tmp/spark-events
+      - spark-jars:/opt/spark/jars
       - ./lakehouse:/lakehouse
+      - ./lakehouse:/data
       - ./spark/config:/opt/spark/conf
+      - ./spark/jobs:/opt/spark/jobs
+      - ./src:/opt/spark/src
     environment:
       - SPARK_MASTER_HOST=spark-master
       - SPARK_MASTER_PORT=7077
@@ -132,11 +157,15 @@ services:
       --webui-port 8080
       --memory 2g
       --cores 2
+      --work-dir /tmp/spark-work
     networks:
       - bigdata-network
     volumes:
       - spark-data:/tmp/spark-events
+      - spark-jars:/opt/spark/jars
       - ./lakehouse:/lakehouse
+      # Mount lakehouse also at /data so executors see the same path as the driver
+      - ./lakehouse:/data
       - ./spark/config:/opt/spark/conf
     environment:
       - SPARK_MASTER=spark://spark-master:7077
@@ -154,11 +183,15 @@ services:
       --webui-port 8080
       --memory 2g
       --cores 2
+      --work-dir /tmp/spark-work
     networks:
       - bigdata-network
     volumes:
       - spark-data:/tmp/spark-events
+      - spark-jars:/opt/spark/jars
       - ./lakehouse:/lakehouse
+      # Mount lakehouse also at /data so executors see the same path as the driver
+      - ./lakehouse:/data
       - ./spark/config:/opt/spark/conf
     environment:
       - SPARK_MASTER=spark://spark-master:7077
@@ -183,12 +216,19 @@ services:
       - AIRFLOW__CORE__LOAD_EXAMPLES=false
       - AIRFLOW__API__AUTH_BACKENDS=airflow.api.auth.backend.basic_auth
       - AIRFLOW__CORE__ENABLE_XCOM_PICKLING=true
+      - LAKEHOUSE_PATH=/data
+      - STORAGE_FORMAT=delta
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - SPARK_MASTER=spark://spark-master:7077
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/logs:/opt/airflow/logs
       - ./airflow/plugins:/opt/airflow/plugins
       - ./airflow/config:/opt/airflow/config
       - ./lakehouse:/lakehouse
+      - ./lakehouse:/data
+      - ./spark/jobs:/opt/spark/jobs
+      - ./src:/opt/spark/src
     command: scheduler
     networks:
       - bigdata-network
@@ -267,6 +307,9 @@ services:
       - ./airflow/plugins:/opt/airflow/plugins
       - ./airflow/config:/opt/airflow/config
       - ./lakehouse:/lakehouse
+      - ./lakehouse:/data
+      - ./spark/jobs:/opt/spark/jobs
+      - ./src:/opt/spark/src
     command: celery worker
     networks:
       - bigdata-network
@@ -452,6 +495,7 @@ volumes:
   postgres-data:
   redis-data:
   spark-data:
+  spark-jars:
   mlflow-artifacts:
   prometheus-data:
   grafana-data:

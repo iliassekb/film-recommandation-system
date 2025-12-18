@@ -1,0 +1,223 @@
+# Silver Layer Table Schemas
+# Purpose: Store cleaned, validated, and deduplicated data ready for analytics
+# Storage Format: Delta Lake
+# Partitioning: By event_date (derived from event_ts)
+
+tables:
+  - name: silver_ratings
+    description: Cleaned and validated ratings from MovieLens and Kafka events
+    storage_format: delta
+    partition_by:
+      - event_date
+    columns:
+      - name: user_id
+        type: integer
+        nullable: false
+        description: User identifier
+      - name: movie_id
+        type: integer
+        nullable: false
+        description: Movie identifier
+      - name: rating
+        type: float
+        nullable: false
+        description: Rating value (0.5-5.0)
+      - name: rating_ts
+        type: timestamp
+        nullable: false
+        description: Rating timestamp
+      - name: source
+        type: string
+        nullable: false
+        description: Source: "movielens" or "kafka"
+      - name: event_id
+        type: string
+        nullable: true
+        description: Event ID if from Kafka
+      - name: event_date
+        type: date
+        nullable: false
+        description: Date derived from rating_ts
+      - name: updated_at
+        type: timestamp
+        nullable: false
+        description: Last update timestamp
+    uniqueness:
+      - user_id
+      - movie_id
+      - rating_ts
+
+  - name: silver_movies
+    description: Cleaned and validated movie metadata
+    storage_format: delta
+    partition_by: []
+    columns:
+      - name: movie_id
+        type: integer
+        nullable: false
+        description: Movie identifier (primary key)
+      - name: title
+        type: string
+        nullable: false
+        description: Movie title
+      - name: release_year
+        type: integer
+        nullable: true
+        description: Extracted year from title
+      - name: genres
+        type: array<string>
+        nullable: false
+        description: Array of genres
+      - name: updated_at
+        type: timestamp
+        nullable: false
+        description: Last update timestamp
+    uniqueness:
+      - movie_id
+
+  - name: silver_tags
+    description: Cleaned and validated tags
+    storage_format: delta
+    partition_by:
+      - event_date
+    columns:
+      - name: user_id
+        type: integer
+        nullable: false
+        description: User identifier
+      - name: movie_id
+        type: integer
+        nullable: false
+        description: Movie identifier
+      - name: tag
+        type: string
+        nullable: false
+        description: Tag text
+      - name: tag_ts
+        type: timestamp
+        nullable: false
+        description: Tag timestamp
+      - name: event_date
+        type: date
+        nullable: false
+        description: Date derived from tag_ts
+      - name: updated_at
+        type: timestamp
+        nullable: false
+        description: Last update timestamp
+
+  - name: silver_events_views
+    description: Cleaned and validated view events
+    storage_format: delta
+    partition_by:
+      - event_date
+    columns:
+      - name: event_id
+        type: string
+        nullable: false
+        description: Event identifier (UUID)
+      - name: event_ts
+        type: timestamp
+        nullable: false
+        description: Event timestamp
+      - name: user_id
+        type: integer
+        nullable: false
+        description: User identifier
+      - name: movie_id
+        type: integer
+        nullable: false
+        description: Movie identifier
+      - name: session_id
+        type: string
+        nullable: true
+        description: Session identifier (UUID)
+      - name: device_type
+        type: string
+        nullable: true
+        description: Device type
+      - name: event_date
+        type: date
+        nullable: false
+        description: Date derived from event_ts
+    uniqueness:
+      - event_id
+
+  - name: silver_events_clicks
+    description: Cleaned and validated click events
+    storage_format: delta
+    partition_by:
+      - event_date
+    columns:
+      - name: event_id
+        type: string
+        nullable: false
+        description: Event identifier (UUID)
+      - name: event_ts
+        type: timestamp
+        nullable: false
+        description: Event timestamp
+      - name: user_id
+        type: integer
+        nullable: false
+        description: User identifier
+      - name: movie_id
+        type: integer
+        nullable: false
+        description: Movie identifier
+      - name: click_type
+        type: string
+        nullable: true
+        description: Type of click (trailer|poster|title|recommendation)
+      - name: session_id
+        type: string
+        nullable: true
+        description: Session identifier (UUID)
+      - name: referrer
+        type: string
+        nullable: true
+        description: Referrer URL
+      - name: event_date
+        type: date
+        nullable: false
+        description: Date derived from event_ts
+    uniqueness:
+      - event_id
+
+  - name: silver_events_ratings
+    description: Cleaned and validated rating events from Kafka
+    storage_format: delta
+    partition_by:
+      - event_date
+    columns:
+      - name: event_id
+        type: string
+        nullable: false
+        description: Event identifier (UUID)
+      - name: event_ts
+        type: timestamp
+        nullable: false
+        description: Event timestamp
+      - name: user_id
+        type: integer
+        nullable: false
+        description: User identifier
+      - name: movie_id
+        type: integer
+        nullable: false
+        description: Movie identifier
+      - name: rating
+        type: float
+        nullable: false
+        description: Rating value (0.5-5.0)
+      - name: review_text
+        type: string
+        nullable: true
+        description: Optional review text
+      - name: event_date
+        type: date
+        nullable: false
+        description: Date derived from event_ts
+    uniqueness:
+      - event_id
+

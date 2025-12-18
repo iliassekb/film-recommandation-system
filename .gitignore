@@ -1,4 +1,6 @@
+# -------------------------
 # Python
+# -------------------------
 __pycache__/
 *.py[cod]
 *$py.class
@@ -23,47 +25,53 @@ wheels/
 .installed.cfg
 *.egg
 
+# -------------------------
 # Airflow
+# -------------------------
 airflow/logs/
 airflow/airflow.db
 airflow/airflow.cfg
 
+# -------------------------
 # Jupyter Notebook
-.ipynb_checkpoints
+# -------------------------
+.ipynb_checkpoints/
 
+# -------------------------
 # Environment variables
+# -------------------------
 .env
 .env.local
 
+# -------------------------
 # IDE
+# -------------------------
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
+# -------------------------
 # OS
+# -------------------------
 .DS_Store
 Thumbs.db
 
-# Data
-*.parquet
-*.delta
-lakehouse/*.parquet
-lakehouse/*.delta
-
-# Logs
+# -------------------------
+# Logs / Archives / Temp
+# -------------------------
 *.log
-
-# Backups
 backups/
 *.tar.gz
 *.zip
-
-# Temporary files
 *.tmp
 *.crc
 _SUCCESS
 _temporary/
 checkpoint/
 
+# -------------------------
+# Lakehouse (ignore everything)
+# -------------------------
+lakehouse/

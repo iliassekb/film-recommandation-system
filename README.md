@@ -110,7 +110,135 @@ Une fois tous les services démarrés, vous pouvez accéder à :
 │   ├── provisioning/
 │   └── dashboards/
 └── lakehouse/                  # Stockage des données (Delta/Parquet)
+    └── bronze/                 # Bronze layer (raw data)
+        └── movielens/          # MovieLens dataset
+├── docs/                       # Documentation
+│   ├── 01_data_contracts.md   # Data contracts and schemas
+│   └── 02_step2_bootstrap_bronze.md  # Step 2 bootstrap guide
+├── schemas/                    # Schema definitions
+│   ├── events/                 # Kafka event JSON schemas
+│   └── lakehouse/              # Lakehouse table YAML schemas
+└── Makefile                    # Convenience commands
 ```
+
+## Step 1: Data Contracts
+
+The data contracts define the schemas and validation rules for the entire data pipeline.
+
+### Documentation
+
+- **Data Contracts**: `docs/01_data_contracts.md` - Complete data contracts including:
+  - Use cases (UC1: Top-K recommendations, UC2: Trending Now, UC3: Hybrid reranking)
+  - Kafka event schemas (view, click, rating events)
+  - Lakehouse table schemas (Bronze, Silver, Gold layers)
+  - Data quality rules and failure handling
+
+### Schemas
+
+- **Kafka Event Schemas**: `schemas/events/`
+  - `view_event.schema.json`
+  - `click_event.schema.json`
+  - `rating_event.schema.json`
+
+- **Lakehouse Table Schemas**: `schemas/lakehouse/`
+  - `bronze_tables.yml`
+  - `silver_tables.yml`
+  - `gold_tables.yml`
+
+### View Documentation
+
+```bash
+# View data contracts
+cat docs/01_data_contracts.md
+
+# Or use make
+make docs
+```
+
+## Step 2: Bootstrap MovieLens 25M to Bronze
+
+Download and extract the MovieLens 25M dataset to the Bronze layer.
+
+### Prerequisites
+
+- Internet connection (to download ~250 MB dataset)
+- ~2 GB free disk space
+- Python 3.6+ (for validation script)
+
+### Bootstrap Dataset
+
+**All Platforms (Python):**
+```bash
+# Using Makefile
+make bootstrap_bronze
+
+# Or directly
+python scripts/bootstrap_bronze_movielens_25m.py
+
+# With force flag (re-download)
+python scripts/bootstrap_bronze_movielens_25m.py --force
+```
+
+**Alternative (Linux/Mac - Bash):**
+```bash
+./scripts/bootstrap_bronze_movielens_25m.sh
+
+# With force flag
+./scripts/bootstrap_bronze_movielens_25m.sh --force
+```
+
+### Validate Bronze Data
+
+After bootstrap, validate that all files are present:
+
+```bash
+# Using Makefile
+make validate_bronze
+
+# Or directly
+python scripts/validate_bronze_presence.py
+```
+
+### Expected Structure
+
+After bootstrap, the Bronze layer will have:
+
+```
+lakehouse/
+└── bronze/
+    └── movielens/
+        └── ml-25m/
+            ├── _manifest.json      # Dataset metadata
+            ├── ratings.csv         # ~25M ratings
+            ├── movies.csv          # ~62K movies
+            ├── tags.csv            # ~1M tags
+            ├── links.csv           # Movie links
+            ├── genome-scores.csv   # (optional)
+            └── genome-tags.csv     # (optional)
+```
+
+### Container Access
+
+The Bronze data is accessible from Docker containers at `/lakehouse/bronze/`:
+
+```bash
+# Verify from Spark container
+docker-compose exec spark-master ls -lh /lakehouse/bronze/movielens/ml-25m/
+
+# Verify from Airflow container
+docker-compose exec airflow-worker ls -lh /lakehouse/bronze/movielens/ml-25m/
+```
+
+### Next Steps
+
+After Step 2 completion:
+1. ✅ Data contracts defined (Step 1)
+2. ✅ Bronze layer bootstrapped (Step 2)
+3. ✅ **Step 3**: Spark ETL Bronze → Silver (implemented)
+4. ✅ **Step 4**: ALS Training and Recommendations (implemented)
+5. ✅ **Step 5**: Airflow Orchestration (implemented)
+
+See `docs/03_step3_to_step5.md` for detailed information on Steps 3-5.
 
 ## Commandes Utiles
 
