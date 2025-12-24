@@ -1,0 +1,28 @@
+version: '3.8'
+
+# Extension du docker-compose.yml principal pour ajouter Spark
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.spark.yml up
+
+services:
+  spark-consumer:
+    build:
+      context: .
+      dockerfile: Dockerfile.spark
+    container_name: spark-consumer
+    depends_on:
+      - kafka
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      SPARK_MODE: master
+      SPARK_RPC_AUTHENTICATION_ENABLED: "no"
+      SPARK_RPC_ENCRYPTION_ENABLED: "no"
+      SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED: "no"
+      SPARK_SSL_ENABLED: "no"
+    volumes:
+      # Monter les dossiers pour persister les données Silver
+      - ./lakehouse:/opt/bitnami/spark/work/lakehouse
+    networks:
+      - kafka-network
+    command: ["python3", "/app/stream_kafka_to_silver.py"]
+    restart: unless-stopped
+

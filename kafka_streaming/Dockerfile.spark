@@ -1,0 +1,21 @@
+# Dockerfile.spark
+FROM spark:3.5.7-java17-python3
+
+WORKDIR /app
+
+USER root
+ENV HOME=/root
+
+# If you have Python deps:
+COPY requirements.txt .
+RUN set -eux; \
+    if python3 -c "import pyspark" >/dev/null 2>&1; then \
+      awk '!/^pyspark([<=>].*)?$/' requirements.txt > /tmp/requirements.no_pyspark.txt; \
+      python3 -m pip install --no-cache-dir -r /tmp/requirements.no_pyspark.txt; \
+    else \
+      python3 -m pip install --no-cache-dir -r requirements.txt; \
+    fi
+
+COPY spark/jobs/stream_kafka_to_silver.py /app/stream_kafka_to_silver.py
+
+CMD ["python3", "stream_kafka_to_silver.py"]
